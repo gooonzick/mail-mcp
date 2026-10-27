@@ -1,0 +1,6 @@
+node_modules/
+coverage/
+.DS_Store
+# Real account configs live in ~/.config/mail-mcp; never commit one by accident.
+accounts.json
+*.local.json

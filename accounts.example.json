@@ -1,0 +1,22 @@
+{
+  "accounts": [
+    {
+      "id": "gmail",
+      "email": "you@gmail.com",
+      "displayName": "Your Name",
+      "imap": { "host": "imap.gmail.com", "port": 993, "secure": true },
+      "smtp": { "host": "smtp.gmail.com", "port": 465, "secure": true },
+      "smtpSavesToSent": true,
+      "password": { "keychain": { "service": "mail-mcp", "account": "you@gmail.com" } }
+    },
+    {
+      "id": "work",
+      "email": "you@example.ru",
+      "displayName": "Your Name from Example",
+      "imap": { "host": "mail.hosting.reg.ru", "port": 993, "secure": true },
+      "smtp": { "host": "mail.hosting.reg.ru", "port": 465, "secure": true },
+      "smtpSavesToSent": false,
+      "password": { "env": "MAIL_MCP_WORK_PASSWORD" }
+    }
+  ]
+}
