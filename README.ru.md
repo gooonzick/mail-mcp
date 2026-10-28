@@ -1,22 +1,25 @@
 # mail-mcp
 
-Stdio MCP-сервер для нескольких почтовых ящиков по IMAP/SMTP: папки, поиск, чтение, черновики, ответы, отправка. Проверен на Gmail и почте хостинга reg.ru (ISPmanager).
+[English version](README.md)
 
-Сервер написан на официальном MCP TypeScript SDK v2 (`@modelcontextprotocol/server`; это актуальная линия SDK, заменившая монолитный `@modelcontextprotocol/sdk` v1), почта — `imapflow`, `nodemailer`, `mailparser`. TypeScript запускается напрямую Node.js (type stripping), сборки нет.
+Stdio [MCP](https://modelcontextprotocol.io)-сервер для ваших почтовых ящиков по IMAP/SMTP. Claude или другой MCP-клиент видит папки, ищет и читает письма, готовит черновики и ответы. Письмо уходит только через `send_draft` и только из черновика, который вы видели и одобрили.
+
+- Несколько ящиков; каждый отправляет только через свой SMTP и только со своего адреса.
+- Пароли хранятся в Keychain macOS или в переменных окружения, никогда в конфиге и в ответах инструментов.
+- Черновики пишутся в markdown: `[слова](https://адрес)` становится ссылкой на этих словах, текстовая версия собирается автоматически.
+- «Отправленные», «Черновики» и «Корзина» определяются по флагам IMAP SPECIAL-USE, локализованные имена папок — запасной вариант.
+- Всё, что взято из писем, приходит модели внутри меток `<untrusted-email-content>` со случайным nonce.
+
+Проверен на Gmail и почте хостинга reg.ru (ISPmanager).
 
 ## Требования
 
-- Node.js 24 или новее, pnpm.
-- macOS с Keychain (или пароли в переменных окружения).
+- Node.js 20.19 или новее.
+- Keychain macOS для паролей или переменные окружения на любой ОС.
 
-```bash
-cd mail-mcp
-pnpm install
-```
+## Настройка
 
-## 1. Пароли в Keychain
-
-Пароли не хранятся ни в репозитории, ни в конфиге, и инструменты их не возвращают.
+### 1. Пароли
 
 - **Gmail**: нужен пароль приложения, обычный пароль Google по IMAP не подойдёт. Включите двухэтапную аутентификацию, затем создайте пароль на <https://myaccount.google.com/apppasswords>. Google покажет 16 символов: вводите их без пробелов.
 - **reg.ru**: пароль почтового ящика, тот же, что для входа в webmail.hosting.reg.ru. Сменить его можно в ISPmanager → «Почта» → «Почтовые ящики».
@@ -25,21 +28,17 @@ pnpm install
 security add-generic-password -U -s mail-mcp -a you@gmail.com -w
 ```
 
-```bash
-security add-generic-password -U -s mail-mcp -a you@example.ru -w
-```
-
 `security` дважды спросит пароль; ввод не отображается и не попадает в историю shell. `-U` обновляет существующую запись. Проверить, что запись есть, не показывая пароль:
 
 ```bash
-security find-generic-password -s mail-mcp -a you@example.ru
+security find-generic-password -s mail-mcp -a you@gmail.com
 ```
 
-Вместо Keychain можно взять пароль из переменной окружения: `"password": { "env": "MAIL_MCP_GMAIL_PASSWORD" }`.
+Без Keychain пароль можно взять из переменной окружения: `"password": { "env": "MAIL_MCP_WORK_PASSWORD" }`.
 
-## 2. Конфиг ящиков
+### 2. Конфиг ящиков
 
-Конфиг лежит вне репозитория: `~/.config/mail-mcp/accounts.json` (другой путь задаёт `MAIL_MCP_CONFIG`). Образец — [accounts.example.json](accounts.example.json). Сервер перечитывает файл при каждом вызове, перезапуск не нужен.
+Создайте `~/.config/mail-mcp/accounts.json` (другой путь задаёт `MAIL_MCP_CONFIG`) по образцу [accounts.example.json](accounts.example.json). Сервер перечитывает файл при каждом вызове, перезапуск не нужен.
 
 | Поле | Значение |
 | --- | --- |
@@ -56,27 +55,27 @@ security find-generic-password -s mail-mcp -a you@example.ru
 | Gmail | `imap.gmail.com:993`, TLS | `smtp.gmail.com:465`, TLS | `true`: Gmail кладёт копию сам |
 | reg.ru, хостинг (ISPmanager) | `mail.hosting.reg.ru:993`, TLS | `mail.hosting.reg.ru:465`, TLS | `false`: копию дописывает сервер через IMAP APPEND |
 
-Каждый ящик отправляет только через свой SMTP: SPF домена обычно разрешает только серверы его почтового провайдера.
+Большинство SMTP-серверов хостинга копию не сохраняют. Если после первой отправки в «Отправленных» появился дубль, поставьте `true`. Каждый ящик отправляет только через свой SMTP: SPF домена обычно разрешает только серверы его почтового провайдера.
 
-## 3. Подключение к Claude Code
+### 3. Подключение клиента
 
-```bash
-claude mcp add --scope user mail -- /абсолютный/путь/к/node /абсолютный/путь/к/mail-mcp/src/index.ts
-```
-
-Путь к `node` абсолютный: приложение Claude может запускаться без PATH из shell. Подойдёт любой Node.js 24+ (`which node`). Проверка: `claude mcp list` должен показать `mail: ... ✓ Connected`. Новые инструменты появятся в новых сессиях Claude Code.
-
-## 4. Проверка на живых ящиках
+Claude Code:
 
 ```bash
-pnpm smoke
+claude mcp add --scope user mail -- npx -y @gooonzick/mail-mcp
 ```
 
-Только чтение: список ящиков, папки, последние входящие и отправленные каждого ящика. Один инструмент можно вызвать так:
+Другие MCP-клиенты (Claude Desktop, Cursor и т. п.):
 
-```bash
-pnpm smoke search_messages '{"account":"work","folder":"sent","limit":5}'
+```json
+{
+  "mcpServers": {
+    "mail": { "command": "npx", "args": ["-y", "@gooonzick/mail-mcp"] }
+  }
+}
 ```
+
+Приложения с интерфейсом иногда запускаются без `PATH` из shell. Если клиент не находит `npx`, укажите абсолютный путь из `which npx`. Новые инструменты появятся в новых сессиях Claude Code.
 
 ## Инструменты
 
@@ -92,18 +91,18 @@ pnpm smoke search_messages '{"account":"work","folder":"sent","limit":5}'
 | `mark` | прочитано/непрочитано, флаг |
 | `move` | перенос в другую папку |
 
-Папку можно указать ролью (`inbox`, `sent`, `drafts`, `trash`, `junk`, `archive`, `all`, `flagged`) или точным путём из `list_folders`. Роль определяется по флагам SPECIAL-USE сервера; если флагов нет — по известным локализованным именам («Отправленные», «Черновики», «Sent»…). UID сообщения действует только внутри своей папки.
+Папку можно указать ролью (`inbox`, `sent`, `drafts`, `trash`, `junk`, `archive`, `all`, `flagged`) или точным путём из `list_folders`. UID сообщения действует только внутри своей папки.
 
 Тело письма — markdown: `[слова](https://адрес)` становится ссылкой на этих словах в HTML-части, в текстовой части получается «слова (https://адрес)». Одиночный перенос строки сохраняется как перенос.
 
 ## Как проходит отправка
 
 1. `create_draft` или `reply` собирает MIME (HTML + текст, `multipart/alternative`) и кладёт его в «Черновики» через IMAP APPEND с флагами `\Draft \Seen`.
-2. Claude показывает черновик: получатели, тема, текст. Отправка — только после явного «да».
+2. Клиент показывает черновик: получатели, тема, текст. `send_draft` вызывается только после вашего явного «да».
 3. `send_draft`:
    - проверяет, что `From` черновика совпадает с адресом ящика, иначе ничего не отправляет;
-   - убирает заголовок `Bcc`, ставит новые `Message-ID` и `Date`;
-   - отправляет через SMTP этого же ящика (получатели Bcc остаются в SMTP-конверте);
+   - убирает заголовок `Bcc`, ставит новые `Message-ID` и `Date` (получатели Bcc остаются в SMTP-конверте);
+   - отправляет через SMTP этого же ящика;
    - если `smtpSavesToSent: false`, дописывает отправленные байты в «Отправленные» (`\Sent`) с флагом `\Seen`. Gmail копию кладёт сам, поэтому там APPEND не делается, иначе были бы дубли;
    - переносит черновик в «Корзину».
 4. Если SMTP не принял письмо, в «Отправленные» ничего не пишется и черновик остаётся на месте.
@@ -118,11 +117,21 @@ pnpm smoke search_messages '{"account":"work","folder":"sent","limit":5}'
 ## Разработка
 
 ```bash
-pnpm test
+git clone https://github.com/gooonzick/mail-mcp.git
+cd mail-mcp
+pnpm install
 ```
 
-```bash
-pnpm typecheck
-```
+Из исходников Node.js 24 запускает TypeScript напрямую (type stripping): `node src/index.ts`.
 
-Тесты: сборка MIME из markdown, правило дописывания в «Отправленные» и порядок шагов отправки, подготовка письма к SMTP (Bcc, Message-ID), адресаты и цепочка ответа, выбор папок по SPECIAL-USE, пометка недоверенного текста, сервер целиком по stdio. IMAP и SMTP в тестах заменены фейками, сетевых вызовов нет.
+| Команда | Что делает |
+| --- | --- |
+| `pnpm test` | юнит-тесты и проверка сервера целиком по stdio; IMAP и SMTP заменены фейками, сети нет |
+| `pnpm typecheck` | проверка TypeScript |
+| `pnpm smoke` | только чтение на ваших ящиках: папки, последние входящие и отправленные |
+| `pnpm smoke <tool> '<json>'` | вызвать один инструмент и вывести результат |
+| `pnpm build` | сборка в `dist/`; запускается сама перед `npm pack` и `npm publish` |
+
+## Лицензия
+
+[MIT](LICENSE)
