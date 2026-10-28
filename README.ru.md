@@ -132,6 +132,15 @@ pnpm install
 | `pnpm smoke <tool> '<json>'` | вызвать один инструмент и вывести результат |
 | `pnpm build` | сборка в `dist/`; запускается сама перед `npm pack` и `npm publish` |
 
+### Релиз
+
+```bash
+npm version patch        # или minor / major: поднимает версию, коммитит и ставит тег vX.Y.Z
+git push --follow-tags
+```
+
+Тег запускает [workflow релиза](.github/workflows/release.yml): он сверяет тег с версией в `package.json`, прогоняет typecheck и тесты, собирает пакет, публикует его в npm и создаёт GitHub Release. Публикация идёт через [trusted publishing](https://docs.npmjs.com/trusted-publishers) npm: токена npm в репозитории нет, а у пакета есть provenance — npm показывает, из какого коммита и каким workflow он собран. Trusted publisher настраивается один раз в настройках пакета на npmjs.com: GitHub Actions, репозиторий `gooonzick/mail-mcp`, workflow `release.yml`.
+
 ## Лицензия
 
 [MIT](LICENSE)

@@ -129,6 +129,15 @@ From a checkout, Node.js 24 runs the TypeScript sources directly through type st
 | `pnpm smoke <tool> '<json>'` | calls one tool and prints the result |
 | `pnpm build` | compiles to `dist/`; runs by itself before `npm pack` and `npm publish` |
 
+### Releasing
+
+```bash
+npm version patch        # or minor / major: bumps package.json, commits and tags vX.Y.Z
+git push --follow-tags
+```
+
+The tag starts the [release workflow](.github/workflows/release.yml). It checks that the tag matches the version in `package.json`, runs the typecheck and tests, builds, publishes to npm and creates a GitHub release. Publishing goes through npm [trusted publishing](https://docs.npmjs.com/trusted-publishers): the repository holds no npm token, and the package gets a provenance attestation that links it to the commit and workflow it was built from. The trusted publisher is configured once in the package settings on npmjs.com: GitHub Actions, repository `gooonzick/mail-mcp`, workflow `release.yml`.
+
 ## License
 
 [MIT](LICENSE)
