@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import { McpServer } from '@modelcontextprotocol/server';
 import type { ImapFlow, MessageAddressObject } from 'imapflow';
 import { simpleParser, type AddressObject, type EmailAddress, type ParsedMail } from 'mailparser';
@@ -19,6 +20,9 @@ const INSTRUCTIONS = `Mail tools for the user's own mailboxes over IMAP/SMTP. Ev
 - UIDs are per folder: a message is identified by account + folder + uid.`;
 
 const QUOTE_LIMIT = 20_000;
+
+// package.json sits one level above both src/ and dist/.
+const { version } = createRequire(import.meta.url)('../package.json') as { version: string };
 
 const accountArg = z.string().describe('Account id from list_accounts');
 const folderArg = z.string().describe(FOLDER_ARGUMENT_HELP);
@@ -43,7 +47,7 @@ async function run(work: () => Promise<string>): Promise<ToolResult> {
 }
 
 export function buildServer(): McpServer {
-  const server = new McpServer({ name: 'mail-mcp', version: '0.1.0' }, { instructions: INSTRUCTIONS });
+  const server = new McpServer({ name: 'mail-mcp', version }, { instructions: INSTRUCTIONS });
 
   server.registerTool(
     'list_accounts',

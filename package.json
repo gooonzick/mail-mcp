@@ -1,18 +1,50 @@
 {
-  "name": "mail-mcp",
+  "name": "@gooonzick/mail-mcp",
   "version": "0.1.0",
-  "private": true,
-  "description": "Stdio MCP server for several IMAP/SMTP mailboxes: read, search, drafts, replies, send.",
+  "description": "MCP server for your own IMAP/SMTP mailboxes: search, read, drafts and replies; mail is sent only from a draft you confirmed.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "mcp-server",
+    "email",
+    "imap",
+    "smtp",
+    "gmail",
+    "claude"
+  ],
+  "license": "MIT",
+  "author": "George Tsamaladze",
+  "homepage": "https://github.com/gooonzick/mail-mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gooonzick/mail-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/gooonzick/mail-mcp/issues"
+  },
   "type": "module",
+  "bin": {
+    "mail-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "accounts.example.json"
+  ],
   "engines": {
-    "node": ">=24"
+    "node": ">=20.19"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "start": "node src/index.ts",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
     "smoke": "node scripts/smoke.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "check": "pnpm typecheck && pnpm test"
+    "check": "pnpm typecheck && pnpm test",
+    "prepack": "pnpm run build",
+    "prepublishOnly": "pnpm run check"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.4.0",
